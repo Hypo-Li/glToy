@@ -1,6 +1,6 @@
 #include <ys/camera.h>
 
-ys::Camera::Camera(CameraParam& cp)
+ys::FPSCamera::FPSCamera(ys::CameraParam& cp)
 {
     this->position = cp.position;
     glm::vec3 direction = glm::normalize(cp.position - cp.target); //摄像机方向(目标指向摄像机)
@@ -20,7 +20,7 @@ ys::Camera::Camera(CameraParam& cp)
     this->firstMouse = true;
 }
 
-void ys::Camera::MoveView(double xpos, double ypos)
+void ys::FPSCamera::MoveView(double xpos, double ypos)
 {
     if (firstMouse)
     {

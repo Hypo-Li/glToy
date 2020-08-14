@@ -6,20 +6,46 @@
 #include <glm/gtc/type_ptr.hpp>
 
 //全局变量
+ys::FPSCamera* camera;
+ys::BodyPosture posture = ys::Body_Posture_Stand;
+ys::MoveDirection moveDir = ys::Move_Direction_None;
+const float standHeight = 1.7f; //站立视角高度
+const float squatHeight = 1.0f; //下蹲视角高度
+const float crawlHeight = 0.2f; //匍匐视角高度
+const float standSpeed = 4.0f; //站立移动速度
+const float squatSpeed = 2.0f; //下蹲移动速度
+const float crawlSpeed = 0.5f; //卧倒移动速度
+const float standSquat = 0.05f; //站立->下蹲 转换速度
+const float squatStand = 0.05f; //下蹲->站立 转换速度
+const float squatCrawl = 0.08f; //下蹲->卧倒 转换速度
+const float crawlSquat = 0.08f; //卧倒->下蹲 转换速度
+const float jumpInitSpeed = 4.0f; //跳跃初速度
+const float g = 9.8f; //重力加速度
+const float jumpEndTime = 2.0f * jumpInitSpeed / g;
+float jumpBeginTime = 0.0f;
+float jumpCurtTime = 0.0f;
+const float jumpBufferHalfTime = 0.175f;
+const float jumpBufferDepth = 0.1f;
+const float weaponJumpShaking = 0.0f;
+const float weaponBufferShaking = 0.2f;
+float weaponBuffer = 0.0f;
+float shakingRange = 0.0f; //武器摇晃幅度
+float shakingSpeed = 8.0f; //武器摇晃速度
+const float inertiaChange = 0.05f;
+float inertiaSpeed = 0.0f;
 float curtTime = 0.0f; //当前帧时间
 float lastTime = 0.0f; //上一帧时间
 float deltaTime = 0.0f; //两帧的时间差
-float curtY = 0.0f;
-float speed = 4.0f;
-bool moveTF = false; //角色是否在移动
-bool crouchTF = false; //角色是否在下蹲
-int bodyState = 0; //0: 站立 1：下蹲 2：匍匐
-ys::Camera* camera;
+float height = standHeight;
+float speed = standSpeed;
+bool moveTF = false; //角色当前是否在移动
 
 //函数声明
-void ErrorCallback(int error, const char* description);
 void ProcessInput(GLFWwindow* window);
-void MouseCallback(GLFWwindow* window, double xpos, double ypos);
+void ErrorCallback(int error, const char* description);
+void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 GLuint CreateDepthMapFBO(GLuint width, GLuint height, GLuint& depthMap);
 
 //程序入口
@@ -37,7 +63,9 @@ int main(void)
     GLFWwindow* window = glfwCreateWindow(1600, 900, "glToy", NULL, NULL);
     glfwMakeContextCurrent(window);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); //捕捉鼠标
-    glfwSetCursorPosCallback(window, MouseCallback); //鼠标移动回调函数
+    glfwSetCursorPosCallback(window, CursorPosCallback); //鼠标移动回调函数
+    glfwSetKeyCallback(window, KeyCallback); //键盘回调函数
+    glfwSetMouseButtonCallback(window, MouseButtonCallback); //鼠标按键回调函数
 
     //GLAD初始化
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -51,12 +79,10 @@ int main(void)
     glm::mat4 lightModelMat = glm::translate(matE, lightPos);
     glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 100.0f);
     glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 curtViewMat, curtProjectionMat, curtPositionMat;
-    glm::vec3 curtPosition;
+    glm::mat4 curtViewMat, curtProjectionMat;
+    glm::vec3 curtPosition, weaponPosition;
     glm::mat4 lightSpaceMat = lightProjection * lightView;
     glm::mat4 weaponFollowMat;
-    float shakingRange = 0.0f; //武器摇晃幅度
-    const float shakingSpeed = 8.0f; //武器摇晃速度
 
     //各种开关
     glEnable(GL_DEPTH_TEST); //深度测试
@@ -77,7 +103,7 @@ int main(void)
     cp->yMin = -80.0f;
     cp->projectionMax = 1000.0f;
     cp->projectionMin = 0.001f;
-    camera = new ys::Camera(*cp);
+    camera = new ys::FPSCamera(*cp);
     delete cp;
 
     //加载Shader
@@ -123,15 +149,171 @@ int main(void)
         lastTime = curtTime;
 
         //确定当前y值
-        curtY = 1.7f;
+        switch (posture)
+        {
+        case ys::Body_Posture_Stand:
+            height = standHeight;
+            break;
+        case ys::Body_Posture_Squat:
+            height = squatHeight;
+            break;
+        case ys::Body_Posture_Crawl:
+            height = crawlHeight;
+            break;
+        case ys::Body_Posture_Stand_to_Squat:
+            if (height - standSquat > squatHeight) {
+                height -= standSquat;
+            }
+            else {
+                height = squatHeight;
+                posture = ys::Body_Posture_Squat;
+                speed = squatSpeed;
+            }
+            break;
+        case ys::Body_Posture_Squat_to_Crawl:
+            if (height - squatCrawl > crawlHeight) {
+                height -= squatCrawl;
+            }
+            else {
+                height = crawlHeight;
+                posture = ys::Body_Posture_Crawl;
+                speed = crawlSpeed;
+            }
+            break;
+        case ys::Body_Posture_Stand_to_Crawl:
+            if (height - standSquat > squatHeight) {
+                height -= standSquat;
+            }
+            else if (height - squatCrawl > crawlHeight) {
+                height -= squatCrawl;
+            }
+            else {
+                height = crawlHeight;
+                posture = ys::Body_Posture_Crawl;
+                speed = crawlSpeed;
+            }
+            break;
+        case ys::Body_Posture_Crawl_to_Squat:
+            if (height + crawlSquat < squatHeight) {
+                height += crawlSquat;
+            }
+            else {
+                height = squatHeight;
+                posture = ys::Body_Posture_Squat;
+                speed = squatSpeed;
+            }
+            break;
+        case ys::Body_Posture_Squat_to_Stand:
+            if (height + squatStand < standHeight) {
+                height += squatStand;
+            }
+            else {
+                height = standHeight;
+                posture = ys::Body_Posture_Stand;
+                speed = standSpeed;
+            }
+            break;
+        case ys::Body_Posture_Crawl_to_Stand:
+            if (height + crawlSquat < squatHeight) {
+                height += crawlSquat;
+            }
+            else if (height + squatStand < standHeight) {
+                height += squatStand;
+            }
+            else {
+                height = standHeight;
+                posture = ys::Body_Posture_Stand;
+                speed = standSpeed;
+            }
+            break;
+        case ys::Body_Posture_Jump:
+            if (jumpBeginTime) {
+                jumpCurtTime = curtTime - jumpBeginTime;
+                if (jumpCurtTime <= jumpEndTime) { //跳跃阶段
+                    height = (jumpInitSpeed - 0.5f * g * jumpCurtTime) * jumpCurtTime;
+                    weaponBuffer = height * weaponJumpShaking;
+                }
+                else { //缓冲阶段
+                    height = (jumpBufferDepth / jumpBufferHalfTime) * (jumpCurtTime - jumpEndTime) * ((jumpCurtTime - jumpEndTime) / jumpBufferHalfTime - 2.0f);
+                    if (height >= 0.0f) {
+                        height = 0.0f;
+                        posture = ys::Body_Posture_Stand;
+                        speed = standSpeed;
+                        jumpBeginTime = 0.0f;
+                    }
+                    weaponBuffer = height * weaponBufferShaking;
+                }
+                height += standHeight;
+            }
+            else { //跳跃开始，设置开始时间
+                jumpBeginTime = curtTime;
+            }
+            break;
+        default:
+            break;
+        }
 
-        ProcessInput(window); //处理键盘输入
+        //处理键盘输入
+        ProcessInput(window);
+
+        //处理跳跃时的移动惯性
+        if (jumpBeginTime) {
+            if (!moveTF) {
+                switch (moveDir)
+                {
+                case ys::Move_Direction_Front:
+                    if (inertiaSpeed >= inertiaChange * deltaTime) {
+                        inertiaSpeed -= inertiaChange * deltaTime;
+                        camera->MoveFront(inertiaSpeed);
+                    }
+                    else {
+                        moveDir = ys::Move_Direction_None;
+                    }
+                    break;
+                case ys::Move_Direction_Back:
+                    if (inertiaSpeed >= inertiaChange * deltaTime) {
+                        inertiaSpeed -= inertiaChange * deltaTime;
+                        camera->MoveBack(inertiaSpeed);
+                    }
+                    else {
+                        moveDir = ys::Move_Direction_None;
+                    }
+                    break;
+                case ys::Move_Direction_Left:
+                    if (inertiaSpeed >= inertiaChange * deltaTime) {
+                        inertiaSpeed -= inertiaChange * deltaTime;
+                        camera->MoveLeft(inertiaSpeed);
+                    }
+                    else {
+                        moveDir = ys::Move_Direction_None;
+                    }
+                    break;
+                case ys::Move_Direction_Right:
+                    if (inertiaSpeed > inertiaChange * deltaTime) {
+                        inertiaSpeed -= inertiaChange * deltaTime;
+                        camera->MoveRight(inertiaSpeed);
+                    }
+                    else {
+                        moveDir = ys::Move_Direction_None;
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+        else {
+            if(!moveTF)
+                moveDir = ys::Move_Direction_None;
+        }
 
         //当前帧变量更新
         curtViewMat = camera->CreateViewMat();
         curtProjectionMat = camera->CreatePerspectiveProjectionMat(16.0f, 9.0f);
         curtPosition = camera->GetPosition();
-        curtPositionMat = glm::translate(matE, curtPosition);
+        weaponPosition = curtPosition;
+        weaponPosition.y += weaponBuffer;
+        weaponFollowMat = glm::translate(matE, weaponPosition);
 
         glClearColor(0.223529f, 0.709804f, 0.290196f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -175,7 +357,7 @@ int main(void)
 
         //渲染武器
         modelShader->Use();
-        weaponFollowMat = glm::rotate(curtPositionMat, glm::radians(-camera->GetYaw()), glm::vec3(0.0f, 1.0f, 0.0f));
+        weaponFollowMat = glm::rotate(weaponFollowMat, glm::radians(-camera->GetYaw()), glm::vec3(0.0f, 1.0f, 0.0f));
         weaponFollowMat = glm::rotate(weaponFollowMat, glm::radians(camera->GetPitch()), glm::vec3(0.0f, 0.0f, 1.0f));
         if (moveTF) //计算当前帧的武器晃动幅度
             if (shakingRange < 1.0f)
@@ -210,43 +392,103 @@ void ErrorCallback(int error, const char* description)
 
 void ProcessInput(GLFWwindow* window)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
-        glfwSetWindowShouldClose(window, true);
-    }
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS && posture == ys::Body_Posture_Stand) {
+            camera->MoveFront(speed * deltaTime);
+            shakingSpeed = 12.0f;
+        }
+        else {
+            shakingSpeed = 8.0f;
+        }
         camera->MoveFront(speed * deltaTime);
         moveTF = true;
+        moveDir = ys::Move_Direction_Front;
+        inertiaSpeed = speed * deltaTime;
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        camera->MoveBehind(speed * deltaTime);
+        camera->MoveBack(0.5f * speed * deltaTime);
         moveTF = true;
+        moveDir = ys::Move_Direction_Back;
+        inertiaSpeed = 0.5f * speed * deltaTime;
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        camera->MoveLeft(speed * deltaTime);
+        camera->MoveLeft(0.8f * speed * deltaTime);
         moveTF = true;
+        moveDir = ys::Move_Direction_Left;
+        inertiaSpeed = 0.8f * speed * deltaTime;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        camera->MoveRight(speed * deltaTime);
+        camera->MoveRight(0.8f * speed * deltaTime);
         moveTF = true;
+        moveDir = ys::Move_Direction_Right;
+        inertiaSpeed = 0.8f * speed * deltaTime;
     }
-    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-        crouchTF = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    }
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
-    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-    }
-    camera->SetPositionY(curtY);
+    camera->SetPositionY(height);
 }
 
-void MouseCallback(GLFWwindow* window, double xpos, double ypos)
+void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
     camera->MoveView(xpos, ypos);
+}
+
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if(action == GLFW_PRESS)
+        switch (key)
+        {
+        case GLFW_KEY_SPACE:
+            switch (posture)
+            {
+            case ys::Body_Posture_Crawl:
+                posture = ys::Body_Posture_Crawl_to_Stand;
+                break;
+            case ys::Body_Posture_Squat:
+                posture = ys::Body_Posture_Squat_to_Stand;
+                break;
+            case ys::Body_Posture_Stand:
+                posture = ys::Body_Posture_Jump;
+                break;
+            default:
+                break;
+            }
+            break;
+        case GLFW_KEY_C:
+            switch (posture)
+            {
+            case ys::Body_Posture_Stand:
+                posture = ys::Body_Posture_Stand_to_Squat;
+                break;
+            case ys::Body_Posture_Crawl:
+                posture = ys::Body_Posture_Crawl_to_Squat;
+                break;
+            default:
+                break;
+            }
+            break;
+        case GLFW_KEY_LEFT_CONTROL:
+            switch (posture)
+            {
+            case ys::Body_Posture_Stand:
+                posture = ys::Body_Posture_Stand_to_Crawl;
+                break;
+            case ys::Body_Posture_Squat:
+                posture = ys::Body_Posture_Squat_to_Crawl;
+                break;
+            default:
+                break;
+            }
+            break;
+        case GLFW_KEY_ESCAPE:
+            glfwSetWindowShouldClose(window, true);
+            break;
+        default:
+            break;
+        }
+}
+
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+
 }
 
 GLuint CreateDepthMapFBO(GLuint width, GLuint height, GLuint& depthMap)

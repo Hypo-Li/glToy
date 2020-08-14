@@ -16,10 +16,10 @@ namespace ys
         float projectionMin;
     }CameraParam;
 
-    class Camera
+    class FPSCamera
     {
     public:
-        Camera(CameraParam& cp);
+        FPSCamera(CameraParam& cp);
 
         glm::mat4 CreateViewMat();
 
@@ -31,7 +31,7 @@ namespace ys
 
         void MoveFront(float speed);
 
-        void MoveBehind(float speed);
+        void MoveBack(float speed);
 
         void MoveLeft(float speed);
 
@@ -60,57 +60,57 @@ namespace ys
     };
 }
 
-inline glm::mat4 ys::Camera::CreateViewMat()
+inline glm::mat4 ys::FPSCamera::CreateViewMat()
 {
     return glm::lookAt(position, position + frontAxis, upAxis);
 }
 
-inline glm::mat4 ys::Camera::CreatePerspectiveProjectionMat(float width, float height)
+inline glm::mat4 ys::FPSCamera::CreatePerspectiveProjectionMat(float width, float height)
 {
     return glm::perspective(glm::radians(fov), width / height, projectionMin, projectionMax);
 }
 
-inline glm::mat4 ys::Camera::CreateOrthographicProjectionMat(float width, float height)
+inline glm::mat4 ys::FPSCamera::CreateOrthographicProjectionMat(float width, float height)
 {
     return glm::ortho(0.0f, width, 0.0f, height, projectionMin, projectionMax);
 }
 
-inline void ys::Camera::MoveFront(float speed)
+inline void ys::FPSCamera::MoveFront(float speed)
 {
     position += speed * frontAxis;
 }
 
-inline void ys::Camera::MoveBehind(float speed)
+inline void ys::FPSCamera::MoveBack(float speed)
 {
     position -= speed * frontAxis;
 }
 
-inline void ys::Camera::MoveLeft(float speed)
+inline void ys::FPSCamera::MoveLeft(float speed)
 {
     position -= speed * glm::normalize(glm::cross(frontAxis, upAxis));
 }
 
-inline void ys::Camera::MoveRight(float speed)
+inline void ys::FPSCamera::MoveRight(float speed)
 {
     position += speed * glm::normalize(glm::cross(frontAxis, upAxis));
 }
 
-inline glm::vec3 ys::Camera::GetPosition()
+inline glm::vec3 ys::FPSCamera::GetPosition()
 {
     return this->position;
 }
 
-inline void ys::Camera::SetPositionY(float y)
+inline void ys::FPSCamera::SetPositionY(float y)
 {
     this->position[1] = y;
 }
 
-inline float ys::Camera::GetYaw()
+inline float ys::FPSCamera::GetYaw()
 {
     return this->yaw;
 }
 
-inline float ys::Camera::GetPitch()
+inline float ys::FPSCamera::GetPitch()
 {
     return this->pitch;
 }

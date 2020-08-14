@@ -157,6 +157,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\image.h" />
+    <ClInclude Include="include\ys\behaviour.h" />
     <ClInclude Include="include\ys\camera.h" />
     <ClInclude Include="include\ys\error.h" />
     <ClInclude Include="include\ys\io.h" />

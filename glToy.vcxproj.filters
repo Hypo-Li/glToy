@@ -68,5 +68,8 @@
     <ClInclude Include="include\image.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="include\ys\behaviour.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

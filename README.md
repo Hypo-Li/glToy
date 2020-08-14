@@ -9,10 +9,13 @@
 
 OpenGL版本: 4.6
 
-![image00](http://a1.qpic.cn/psc?/V13XU9zx41zbKu/8v1c6OdZLSE3kzDE6fnRyocp8X4lrQP*utL0iM7NoVU493dgMguU2aCGyiuJkLb8dHDBzh6k9furd9rFJTp2iCcGh1LTffHHDvmz5nO9zjc!/b&ek=1&kp=1&pt=0&bo=QAahA0AGoQMRADc!&tl=3&vuin=2694409528&tm=1597230000&sce=60-1-1&rf=viewer_311)
+2020/8/14 更新：
+新增了下蹲(C)、匍匐(Left Ctrl)、跳跃(Space)、冲刺(Left Shift)(未完善)
 
-![image01](http://a1.qpic.cn/psc?/V13XU9zx41zbKu/05RlWl8gsTOH*Z17MtCBzPWlMTh99xDo19LluEocjaCyl5GxwA1K0Y0Xqg0l99P51tW1h4xEUu*uVo7h2979Hw!!/b&ek=1&kp=1&pt=0&bo=QAahA0AGoQMRADc!&tl=1&vuin=2694409528&tm=1597230000&sce=50-1-1&rf=viewer_311)
+![image00](./show/show00.png)
 
-![image02](http://a1.qpic.cn/psc?/V13XU9zx41zbKu/05RlWl8gsTOH*Z17MtCBzFmMJds0eojm895fM0yT1jfc4AE4qAY9*r7X.PwVyqIlL48V4RPTujICbyoIOW1iGw!!/b&ek=1&kp=1&pt=0&bo=QAahA0AGoQMRADc!&tl=1&vuin=2694409528&tm=1597230000&sce=50-1-1&rf=viewer_311)
+![image01](./show/show01.png)
 
-![image03](http://a1.qpic.cn/psc?/V13XU9zx41zbKu/05RlWl8gsTOH*Z17MtCBzLy77e2c5mBI8cn8kBVs4*9gN3o0bhan1OlsSrxDIEFrIs*ds2LxWUWKPY2EwArm3Q!!/b&ek=1&kp=1&pt=0&bo=QAahA0AGoQMRADc!&tl=1&vuin=2694409528&tm=1597230000&sce=50-1-1&rf=viewer_311)
+![image02](./show/show02.png)
+
+![image03](./show/show03.png)
