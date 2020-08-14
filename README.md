@@ -12,10 +12,10 @@ OpenGL版本: 4.6
 2020/8/14 更新：
 新增了下蹲(C)、匍匐(Left Ctrl)、跳跃(Space)、冲刺(Left Shift)(未完善)
 
-![image00](./show/show00.png)
+![image00](https://github.com/mydearyoungsnow/glToy/blob/master/show/show00.png)
 
-![image01](./show/show01.png)
+![image01](https://github.com/mydearyoungsnow/glToy/blob/master/show/show01.png)
 
-![image02](./show/show02.png)
+![image02](https://github.com/mydearyoungsnow/glToy/blob/master/show/show02.png)
 
-![image03](./show/show03.png)
+![image03](https://github.com/mydearyoungsnow/glToy/blob/master/show/show03.png)
